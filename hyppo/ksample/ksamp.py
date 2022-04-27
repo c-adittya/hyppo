@@ -173,7 +173,8 @@ class KSample(KSampleTest):
             indep_test = indep_test.lower()
             if indep_test not in INDEP_TESTS.keys():
                 raise ValueError(
-                    "Test {} is not in {}".format(indep_test, INDEP_TESTS.keys())
+                    "Test {} is not in {}".format(
+                        indep_test, INDEP_TESTS.keys())
                 )
             if indep_test == "hsic" and compute_distkern == "euclidean":
                 compute_distkern = "gaussian"
@@ -205,7 +206,8 @@ class KSample(KSampleTest):
                     "independence test, currently {}".format(*indep_test)
                 )
 
-        self.indep_test = INDEP_TESTS[indep_test](**indep_kwargs[indep_test], **kwargs)
+        self.indep_test = INDEP_TESTS[indep_test](
+            **indep_kwargs[indep_test], **kwargs)
 
         KSampleTest.__init__(
             self, compute_distance=compute_distkern, bias=bias, **kwargs
@@ -236,7 +238,7 @@ class KSample(KSampleTest):
 
         return self.indep_test.statistic(u, v)
 
-    def test(self, *args, reps=1000, workers=1, auto=True, random_state=None):
+    def test(self, *args, reps=1000, workers=1, auto=True, random_state=None, perm_blocks=None):
         r"""
         Calculates the *k*-sample test statistic and p-value.
 
@@ -296,7 +298,8 @@ class KSample(KSampleTest):
 
         kwargs = {}
         if self.indep_test_name in ["dcorr", "hsic"]:
-            kwargs = {"auto": auto}
+            kwargs = {"auto": auto,
+                      "perm_blocks": perm_blocks}
 
         return self.indep_test.test(
             u, v, reps, workers, **kwargs, random_state=random_state

@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import NamedTuple
 
+from numpy import ndarray
+from ..tools import check_perm_blocks_dim, chi2_approx, compute_dist
+from ._utils import _CheckInputs
+
 
 class KSampleTestOutput(NamedTuple):
     stat: float
@@ -78,7 +82,7 @@ class KSampleTest(ABC):
         """
 
     @abstractmethod
-    def test(self, *args, reps=1000, workers=1, random_state=None):
+    def test(self, *args, reps=1000, workers=1, random_state=None, perm_blocks=None, auto=True):
         r"""
         Calculates the *k*-sample test statistic and p-value.
 
@@ -103,3 +107,41 @@ class KSampleTest(ABC):
         pvalue : float
             The computed *k*-sample p-value.
         """
+        check_input = _CheckInputs(
+            x,
+            y,
+            reps=reps,
+        )
+        x, y = check_input()
+        if perm_blocks is not None:
+            check_perm_blocks_dim(perm_blocks, y)
+
+        if (
+            auto
+            and x.shape[1] == 1
+            and y.shape[1] == 1
+            and self.compute_distance == "euclidean"
+        ):
+            self.is_fast = True
+
+        if auto and x.shape[0] > 20 and perm_blocks is None:
+            stat, pvalue = chi2_approx(self.statistic, x, y)
+            self.stat = stat
+            self.pvalue = pvalue
+            self.null_dist = None
+        else:
+            if not self.is_fast:
+                x, y = compute_dist(
+                    x, y, metric=self.compute_distance, **self.kwargs)
+                self.is_distance = True
+            stat, pvalue = super(KSampleTest, self).test(
+                x,
+                y,
+                reps,
+                workers,
+                perm_blocks=perm_blocks,
+                is_distsim=self.is_distance,
+                random_state=random_state,
+            )
+
+        return KSampleTestOutput(stat, pvalue)

@@ -13,6 +13,9 @@ from sklearn.metrics import pairwise_distances
 from sklearn.metrics.pairwise import pairwise_kernels
 
 from ...independence import Dcorr
+from ...ksample import KSample
+
+# from .. import Hsic
 from ..common import (
     _check_distmat,
     _check_kernmat,
@@ -77,7 +80,8 @@ class TestPermTree:
         _ = perm_tree.original_indices()
         perms = np.asarray([perm_tree.permute_indices() for _ in range(100)])
         assert_equal(perms[0][1::2] - perms[0][::2], [1, 1, 1])
-        assert_allclose(np.mean(perms, axis=0), [2, 3, 2, 3, 2, 3], rtol=0, atol=0.2)
+        assert_allclose(np.mean(perms, axis=0), [
+                        2, 3, 2, 3, 2, 3], rtol=0, atol=0.2)
 
     def test_fixed_permutation(self):
         np.random.seed(0)
@@ -91,7 +95,8 @@ class TestPermTree:
         perm_tree = _PermTree(blocks)
         perms = np.asarray([perm_tree.permute_indices() for _ in range(10)])
         assert_equal(perms[0][2:], perm_tree.original_indices()[2:])
-        assert_allclose(np.mean(perms, axis=0)[:2], [0.5, 0.5], rtol=0, atol=0.2)
+        assert_allclose(np.mean(perms, axis=0)[:2], [
+                        0.5, 0.5], rtol=0, atol=0.2)
 
     def test_non_int_inputs(self):
         blocks = ["a", "b", "c"]
@@ -255,7 +260,8 @@ class TestHelper:
             return pairwise_distances(x, x, metric="euclidean", **kwargs)
 
         distx, disty = compute_dist(x, y, metric=euclidean)
-        kernx, kerny = multi_compute_kern(*(x, y), metric=gaussian, gamma=gamma)
+        kernx, kerny = multi_compute_kern(
+            *(x, y), metric=gaussian, gamma=gamma)
 
         assert_array_equal(distx, distx_comp)
         assert_array_equal(disty, disty_comp)
@@ -272,6 +278,20 @@ class TestHelper:
         x = pairwise_distances(x, x)
         y = pairwise_distances(y, y)
         stat, pvalue, _ = perm_test(Dcorr().statistic, x, y, is_distsim=True)
+        assert_almost_equal(stat, 1.0, decimal=1)
+        assert_almost_equal(pvalue, 1 / 1000, decimal=1)
+
+    def test_permtest2(self):
+        x, y = linear(100, 1)
+
+        stat, pvalue, _ = perm_test(KSample("Dcorr").statistic, "Dcorr", x, y)
+        assert_almost_equal(stat, 1.0, decimal=1)
+        assert_almost_equal(pvalue, 1 / 1000, decimal=1)
+
+        x = pairwise_distances(x, x)
+        y = pairwise_distances(y, y)
+        stat, pvalue, _ = perm_test(
+            KSample("Dcorr").statistic, "dcorr", x, y)
         assert_almost_equal(stat, 1.0, decimal=1)
         assert_almost_equal(pvalue, 1 / 1000, decimal=1)
 
